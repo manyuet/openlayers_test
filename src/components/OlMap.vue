@@ -9,12 +9,13 @@
     <input type="radio" name="mapSource" @click="switchToBing">Bing地图
     <input type="radio" name="mapSource" @click="switchToStamen">Stamen地图
     <button @click="addRoadMap">roadMapOn</button>
+    <button @click="test">test</button>
   </div>
 </template>
 
 <script>
 import 'ol/ol.css'
-import { Map, View } from 'ol'
+import { Map, View, Overlay } from 'ol'
 // import Feature from 'ol/Feature'
 import TileLayer from 'ol/layer/Tile'
 // import Vector from 'ol/layer/Vector'
@@ -26,6 +27,7 @@ import Stamen from 'ol/source/Stamen'
 import XYZ from 'ol/source/XYZ'
 // import Point from 'ol/geom/Point'
 // import { fromLonLat } from 'ol/proj.js'
+import WMS from 'ol/source/TileWMS'
 export default {
   name: 'OlMap',
   data() {
@@ -39,7 +41,23 @@ export default {
   },
   methods: {
     test() {
-      console.log(2)
+      this.map = new Map('map', {})
+      var wms_layer_map = new WMS(
+        'Base layer',
+        'http://vmap0.tiles.osgeo.org/wms/vmap0',
+        { layers: 'basic' },
+        { isBaseLayer: true }
+      )
+      var wms_layer_labels = new WMS(
+        'Location Labels',
+        'http://vmap0.tiles.osgeo.org/wms/vmap0',
+        { layers: 'clabel,ctylabel,statelabel', transparent: true },
+        { opacity: 1 }
+      )
+      this.map.addLayer([wms_layer_map, wms_layer_labels])
+      if (!this.map.getCenter()) {
+        this.map.zoomToMaxExtent()
+      }
     },
     initMap() {
       const view = new View({ // 地图视图
@@ -59,6 +77,11 @@ export default {
         ],
         view: view
       })
+      var popup = new Overlay({
+        element: document.getElementById('test'),
+        positioning: 'center-center'
+      })
+      this.map.addOverlay(popup)
     },
     switchToOSM() {
       var openStreetMapLayer = new TileLayer({
@@ -97,7 +120,7 @@ export default {
       if (this.roadMap) {
         this.map.addLayer(tiandituLuWang) // 将给定的图层添加到地图顶部
       } else {
-        this.map.removeOverlay(tiandituLuWang)
+        this.map.removeLayer(tiandituLuWang)
       }
     }
     // display() {
