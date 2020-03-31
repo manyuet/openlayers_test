@@ -1,17 +1,14 @@
 <template>
-  <div id="map" />
+  <div id="map" class="map" />
 </template>
 
 <script>
 import 'ol/ol.css'
 import Map from 'ol/Map'
 import View from 'ol/View'
-import { getWidth, getTopLeft } from 'ol/extent'
-import TileLayer from 'ol/layer/Tile'
-import { get as getProjection } from 'ol/proj'
-// import OSM from 'ol/source/OSM'
-import WMTS from 'ol/source/WMTS'
-import WMTSTileGrid from 'ol/tilegrid/WMTS'
+import { Image as ImageLayer, Tile as TileLayer } from 'ol/layer'
+import ImageWMS from 'ol/source/ImageWMS'
+import OSM from 'ol/source/OSM'
 export default {
   name: 'WMTSTest',
   data() {
@@ -24,58 +21,26 @@ export default {
   },
   methods: {
     test() {
-      const projection = getProjection('EPSG:4326')
-      const projectionExtent = projection.getExtent()
-      const size = getWidth(projectionExtent) / 256
-      const resolutions = new Array(14)
-      const matrixIds = new Array(14)
-      for (var z = 0; z < 14; ++z) {
-        // generate resolutions and matrixIds arrays for this WMTS
-        resolutions[z] = size / Math.pow(2, z)
-        matrixIds[z] = z
-      }
-
-      this.map = new Map({
-        layers: [
-          new TileLayer({
-            source: new WMTS({
-              url: '240859a554196e2374a6bb80cfdd3de6',
-              layer: 'vec',
-              matrixSet: 'EPSG:3857',
-              format: 'titles',
-              projection: projection,
-              tileGrid: new WMTSTileGrid({
-                origin: getTopLeft(projectionExtent),
-                resolutions: resolutions,
-                matrixIds: matrixIds
-              }),
-              style: 'default',
-              wrapX: true
-            })
-          }),
-          new TileLayer({
-            source: new WMTS({
-              url: '240859a554196e2374a6bb80cfdd3de6',
-              layer: 'cva',
-              style: 'default',
-              matrixSet: 'c',
-              format: 'titles',
-              wrapX: true,
-              tileGrid: new WMTSTileGrid({
-                origin: getTopLeft(projectionExtent),
-                resolutions: resolutions,
-                matrixIds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
-              })
-            })
+      var layers = [
+        new TileLayer({
+          source: new OSM()
+        }),
+        new ImageLayer({
+          extent: [-13884991, 2870341, -7455066, 6338219],
+          source: new ImageWMS({ // 提供单幅图像的WMS服务器的源
+            url: 'https://ahocevar.com/geoserver/wms',
+            params: { 'LAYERS': 'topp:states' },
+            ratio: 1, // 1表示图像请求是地图视口的大小，是地图视口2的宽度和高度的两倍，依此类推。必须为1或更高。
+            serverType: 'geoserver' // 类型的远程的WMS服务器：mapserver，geoserver或qgis
           })
-        ],
+        })
+      ]
+      this.map = new Map({
+        layers: layers,
         target: 'map',
         view: new View({
-          center: [118.7971, 31.9332], // 中心点
-          projection: projection,
-          zoom: 11,
-          maxZoom: 15,
-          minZoom: 1
+          center: [-10997148, 4569099],
+          zoom: 4
         })
       })
     }

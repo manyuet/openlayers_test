@@ -16,17 +16,11 @@
 <script>
 import 'ol/ol.css'
 import { Map, View, Overlay } from 'ol'
-// import Feature from 'ol/Feature'
 import TileLayer from 'ol/layer/Tile'
-// import Vector from 'ol/layer/Vector'
-// import SVector from 'ol/source/Vector'
 import OSM from 'ol/source/OSM'
 import BingMaps from 'ol/source/BingMaps'
 import Stamen from 'ol/source/Stamen'
-// import GeoJSON from 'ol/format/GeoJSON'
 import XYZ from 'ol/source/XYZ'
-// import Point from 'ol/geom/Point'
-// import { fromLonLat } from 'ol/proj.js'
 import WMS from 'ol/source/TileWMS'
 export default {
   name: 'OlMap',

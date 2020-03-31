@@ -8,16 +8,9 @@
     <!--        <option value="Polygon">Polygon</option>-->
     <!--      </select>-->
     <!--    </form>-->
-    <div id="mouse-position" />
-    <form>
-      <label>Projection </label>
-      <select id="projection">
-        <option value="EPSG:4326">EPSG:4326</option>
-        <option value="EPSG:3857">EPSG:3857</option>
-      </select>
-      <label>Precision </label>
-      <input id="precision" type="number" min="0" max="12" value="4">
-    </form>
+    <div id="mouse-position">
+      <span>Projection </span>
+    </div>
     <form class="form-inline">
       <label>Measurement type &nbsp;</label>
       <select id="measure">
@@ -47,11 +40,11 @@ export default {
   name: 'Test',
   data() {
     return {
+      mousePositionControl: null
     }
   },
   mounted() {
     this.measure()
-    // this.init()
     // this.draw()
   },
   methods: {
@@ -115,16 +108,27 @@ export default {
       }
       addInteractions()
     },
-    measure() {
-      var mousePositionControl = new MousePosition({
-        coordinateFormat: createStringXY(4),
+    mousePosition() { // 实时监测鼠标坐标
+      this.mousePositionControl = new MousePosition({ // 显示鼠标光标的2D坐标的控件
+        coordinateFormat: createStringXY(4), // 坐标格式
         projection: 'EPSG:4326',
-        // comment the following two lines to have the mouse position
-        // be placed within the map.
-        className: 'custom-mouse-position',
-        target: document.getElementById('mouse-position'),
-        undefinedHTML: '&nbsp;'
+        className: 'custom-mouse-position', // css类名称
+        target: document.getElementById('mouse-position'), // 使控件在地图视口之外呈现，请指定一个目标。
+        undefinedHTML: '&nbsp;' // 标记以显示坐标何时不可用（例如，当指针离开地图视口时）
       })
+      // var projectionSelect = document.getElementById('projection')
+      // projectionSelect.addEventListener('change', function(event) {
+      //   mousePositionControl.setProjection(event.target.value) // 报告鼠标位置的投影。
+      // })
+      //
+      // var precisionInput = document.getElementById('precision')
+      // precisionInput.addEventListener('change', function(event) {
+      //   var format = createStringXY(event.target.valueAsNumber)
+      //   mousePositionControl.setCoordinateFormat(format) // 用于渲染当前位置的坐标格式类型。
+      // })
+    },
+    measure() { // 测量长度，面积
+      this.mousePosition()
       var raster = new TileLayer({
         source: new OSM()
       })
@@ -149,16 +153,7 @@ export default {
           })
         })
       })
-      var projectionSelect = document.getElementById('projection')
-      projectionSelect.addEventListener('change', function(event) {
-        mousePositionControl.setProjection(event.target.value)
-      })
 
-      var precisionInput = document.getElementById('precision')
-      precisionInput.addEventListener('change', function(event) {
-        var format = createStringXY(event.target.valueAsNumber)
-        mousePositionControl.setCoordinateFormat(format)
-      })
       /**
        * Currently drawn feature.
        * @type {import("../src/ol/Feature.js").default}
@@ -188,58 +183,32 @@ export default {
        * @type {Overlay}
        */
       var measureTooltip
-
-      /**
-       * Message to show when the user is drawing a polygon.
-       * @type {string}
-       */
-      var continuePolygonMsg = 'Click to continue drawing the polygon'
-
-      /**
-       * Message to show when the user is drawing a line.
-       * @type {string}
-       */
-      var continueLineMsg = 'Click to continue drawing the line'
-
       /**
        * Handle pointer move.
        * @param {import("../src/ol/MapBrowserEvent").default} evt The event.
        */
       var pointerMoveHandler = function(evt) {
-        if (evt.dragging) { // dragging:指示当前是否正在拖动地图。仅为POINTERDRAG和POINTERMOVE事件设置 。默认值为false。
+        if (evt.dragging) { // dragging:指示当前是否正在拖动地图。默认值为false,拖动为true
+          // if这段代码好像注释掉也没什么影响，好像是为了拖动地图是不触发事件？？
           return
         }
-        /** @type {string} */
-        var helpMsg = 'Click to start drawing'
-
-        if (sketch) {
-          var geom = sketch.getGeometry()
-          if (geom instanceof Polygon) {
-            helpMsg = continuePolygonMsg
-          } else if (geom instanceof LineString) {
-            helpMsg = continueLineMsg
-          }
-        }
-
-        helpTooltipElement.innerHTML = helpMsg
-        helpTooltip.setPosition(evt.coordinate)
-
-        helpTooltipElement.classList.remove('hidden')
+        helpTooltip.setPosition(evt.coordinate) // setPosition(位置)：设置此叠加层的位置
+        helpTooltipElement.classList.remove('hidden') // 移除已经存在的类名;
       }
 
       var map = new Map({
-        controls: defaultControls().extend([mousePositionControl]),
+        controls: defaultControls().extend([this.mousePositionControl]),
         layers: [raster, vector],
         target: 'map',
         view: new View({
           center: [-11000000, 4600000],
-          zoom: 4
+          zoom: 8
         })
       })
-      map.on('pointermove', pointerMoveHandler)
-
-      map.getViewport().addEventListener('mouseout', function() {
-        helpTooltipElement.classList.add('hidden')
+      map.on('pointermove', pointerMoveHandler) // 监听type的pointerMoveHandler
+      // addEventListener=onclick
+      map.getViewport().addEventListener('mouseout', function() { // getViewport():拿到作为地图viewport的元素
+        helpTooltipElement.classList.add('hidden') // 添加新的类
       })
 
       var typeSelect = document.getElementById('measure')
@@ -261,7 +230,7 @@ export default {
           output = (Math.round(length * 100) / 100) +
                   ' ' + 'm'
         }
-        return output
+        return output // output测量结果
       }
 
       /**
@@ -284,7 +253,7 @@ export default {
 
       function addInteraction() {
         var type = (typeSelect.value === 'area' ? 'Polygon' : 'LineString')
-        draw = new Draw({
+        draw = new Draw({ // 绘图要素几何的交互
           source: source,
           type: type,
           style: new Style({
