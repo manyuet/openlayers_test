@@ -18,6 +18,9 @@
         <option value="area">Area (Polygon)</option>
       </select>
     </form>
+<!--    <button @click="changed_img">切换影像底图</button>-->
+<!--    <button @click="changed_vec">切换街道底图</button>-->
+<!--    <button @click="changed_ter">切换地形底图</button>-->
   </div>
 </template>
 
@@ -36,11 +39,14 @@ import { LineString, Polygon } from 'ol/geom'
 import { defaults as defaultControls } from 'ol/control'
 import MousePosition from 'ol/control/MousePosition'
 import { createStringXY } from 'ol/coordinate'
+// import XYZ from 'ol/source/XYZ'
+import { fromLonLat } from 'ol/proj'
 export default {
   name: 'Test',
   data() {
     return {
-      mousePositionControl: null
+      mousePositionControl: null,
+      map: null
     }
   },
   mounted() {
@@ -48,6 +54,42 @@ export default {
     // this.draw()
   },
   methods: {
+    // changed_img() {
+    //   var img = new TileLayer({
+    //     source: new XYZ({
+    //       url: 'http://t3.tianditu.com/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=d0cf74b31931aab68af181d23fa23d8d'
+    //     })
+    //   })
+    //   this.map.addLayer(img)
+    // },
+    // changed_vec() {
+    //   var map_cva = new TileLayer({
+    //     source: new XYZ({
+    //       url: 'http://t3.tianditu.com/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=d0cf74b31931aab68af181d23fa23d8d'
+    //     })
+    //   })
+    //   var map_vec = new TileLayer({
+    //     source: new XYZ({
+    //       url: 'http://t4.tianditu.com/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk=d0cf74b31931aab68af181d23fa23d8d'
+    //     })
+    //   })
+    //   this.map.addLayer(map_vec)
+    //   this.map.addLayer(map_cva)
+    // },
+    // changed_ter() {
+    //   var map_ter = new TileLayer({
+    //     source: new XYZ({
+    //       url: 'http://t4.tianditu.com/DataServer?T=ter_w&x={x}&y={y}&l={z}&tk=d0cf74b31931aab68af181d23fa23d8d'
+    //     })
+    //   })
+    //   var map_cta = new TileLayer({
+    //     source: new XYZ({
+    //       url: 'http://t4.tianditu.com/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=d0cf74b31931aab68af181d23fa23d8d'
+    //     })
+    //   })
+    //   this.map.addLayer(map_ter)
+    //   this.map.addLayer(map_cta)
+    // },
     draw() {
       var raster = new TileLayer({
         source: new OSM()
@@ -77,7 +119,7 @@ export default {
         layers: [raster, vector],
         target: 'map',
         view: new View({
-          center: [-11000000, 4600000],
+          center: fromLonLat([116.24, 39.55]),
           zoom: 4
         })
       })
@@ -164,36 +206,36 @@ export default {
        * The help tooltip element.
        * @type {HTMLElement}
        */
-      var helpTooltipElement
+      var helpTooltipElement // 帮助提示框对象
 
       /**
        * Overlay to show the help messages.
        * @type {Overlay}
        */
-      var helpTooltip
+      var helpTooltip // 帮助提示信息对象
 
       /**
        * The measure tooltip element.
        * @type {HTMLElement}
        */
-      var measureTooltipElement
+      var measureTooltipElement // 测量提示框对象
 
       /**
        * Overlay to show the measurement.
        * @type {Overlay}
        */
-      var measureTooltip
+      var measureTooltip // 测量提示信息对象
       /**
        * Handle pointer move.
        * @param {import("../src/ol/MapBrowserEvent").default} evt The event.
        */
-      var pointerMoveHandler = function(evt) {
+      var pointerMoveHandler = function(evt) { // 鼠标移动触发的函数
         if (evt.dragging) { // dragging:指示当前是否正在拖动地图。默认值为false,拖动为true
           // if这段代码好像注释掉也没什么影响，好像是为了拖动地图是不触发事件？？
           return
         }
         helpTooltip.setPosition(evt.coordinate) // setPosition(位置)：设置此叠加层的位置
-        helpTooltipElement.classList.remove('hidden') // 移除已经存在的类名;
+        helpTooltipElement.classList.remove('hidden') // 移除已经存在的类名;当鼠标移除地图视图的时为帮助提示要素添加隐藏样式
       }
 
       var map = new Map({
@@ -201,8 +243,8 @@ export default {
         layers: [raster, vector],
         target: 'map',
         view: new View({
-          center: [-11000000, 4600000],
-          zoom: 8
+          center: fromLonLat([116.24, 39.55]),
+          zoom: 4
         })
       })
       map.on('pointermove', pointerMoveHandler) // 监听type的pointerMoveHandler
