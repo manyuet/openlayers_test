@@ -1,20 +1,30 @@
 <template>
   <div id="map" class="map">
-    <form class="form-inline">
-      <label>Geometry type &nbsp;</label>
-      <select id="type">
-        <option value="Point">Point</option>
-        <option value="LineString">LineString</option>
-        <option value="Polygon">Polygon</option>
-      </select>
-    </form>
     <!--    <form class="form-inline">-->
-    <!--      <label>Measurement type &nbsp;</label>-->
+    <!--      <label>Geometry type &nbsp;</label>-->
     <!--      <select id="type">-->
-    <!--        <option value="length">Length (LineString)</option>-->
-    <!--        <option value="area">Area (Polygon)</option>-->
+    <!--        <option value="Point">Point</option>-->
+    <!--        <option value="LineString">LineString</option>-->
+    <!--        <option value="Polygon">Polygon</option>-->
     <!--      </select>-->
     <!--    </form>-->
+    <div id="mouse-position" />
+    <form>
+      <label>Projection </label>
+      <select id="projection">
+        <option value="EPSG:4326">EPSG:4326</option>
+        <option value="EPSG:3857">EPSG:3857</option>
+      </select>
+      <label>Precision </label>
+      <input id="precision" type="number" min="0" max="12" value="4">
+    </form>
+    <form class="form-inline">
+      <label>Measurement type &nbsp;</label>
+      <select id="measure">
+        <option value="length">Length (LineString)</option>
+        <option value="area">Area (Polygon)</option>
+      </select>
+    </form>
   </div>
 </template>
 
@@ -26,59 +36,101 @@ import { Draw, Modify, Snap } from 'ol/interaction'
 import { Tile as TileLayer, Vector as VectorLayer } from 'ol/layer'
 import { OSM, Vector as VectorSource } from 'ol/source'
 import { Circle as CircleStyle, Fill, Stroke, Style } from 'ol/style'
-// import { unByKey } from 'ol/Observable'
-// import Overlay from 'ol/Overlay'
-// import { getLength } from 'ol/sphere'
-// import { LineString } from 'ol/geom'
+import { unByKey } from 'ol/Observable'
+import Overlay from 'ol/Overlay'
+import { getLength, getArea } from 'ol/sphere'
+import { LineString, Polygon } from 'ol/geom'
+import { defaults as defaultControls } from 'ol/control'
+import MousePosition from 'ol/control/MousePosition'
+import { createStringXY } from 'ol/coordinate'
 export default {
   name: 'Test',
   data() {
     return {
-      map: null
     }
   },
   mounted() {
-    this.init()
+    this.measure()
+    // this.init()
+    // this.draw()
   },
   methods: {
-    init() {
-      // var extent = new GeoJSON().readGeometry(geometry).getExtent()
-      // this.map = new Map({
-      //   target: 'map',
-      //   layers: [
-      //     // new TileLayer({
-      //     //   source: new XYZ({
-      //     //     url: 'http://t4.tianditu.com/DataServer?T=vec_w&x={x}&y={y}&l={z}&tk=240859a554196e2374a6bb80cfdd3de6' // 图层数据源
-      //     //   }),
-      //     //   zIndex: 200,
-      //     //   visible: true
-      //     // })
-      //     new TileLayer({
-      //       source: new OSM()
-      //     }),
-      //     new TileLayer({
-      //       source: new TileDebug()
-      //     })
-      //   ],
-      //   view: new View({
-      //     projection: 'EPSG:4326',
-      //     center: [0, 0],
-      //     zoom: 1
-      //   })
-      // })
-      // function makeSmooth(path, numIterations) {
-      //   numIterations = Math.min(Math.max(numIterations, 1), 10)
-      //   while (numIterations > 0) {
-      //     path = smooth(path)
-      //     numIterations--
-      //   }
-      //   return path
-      // }
+    draw() {
       var raster = new TileLayer({
         source: new OSM()
       })
 
       var source = new VectorSource()
+      var vector = new VectorLayer({
+        source: source,
+        style: new Style({
+          fill: new Fill({ // 填充样式
+            color: 'rgba(255, 255, 255, 0.2)'
+          }),
+          stroke: new Stroke({ // 描边样式
+            color: '#ffcc33',
+            width: 2
+          }),
+          image: new CircleStyle({ // 图像样式
+            radius: 7,
+            fill: new Fill({
+              color: '#ff5658'
+            })
+          })
+        })
+      })
+
+      var map = new Map({
+        layers: [raster, vector],
+        target: 'map',
+        view: new View({
+          center: [-11000000, 4600000],
+          zoom: 4
+        })
+      })
+
+      var modify = new Modify({ source: source }) // 修改要素几何的交互
+      map.addInteraction(modify) // 将给定的互动添加到地图中
+
+      var draw, snap // global so we can remove them later
+      var typeSelect = document.getElementById('type')
+
+      function addInteractions() {
+        draw = new Draw({ // 绘图要素几何的交互
+          source: source, // 绘图要素的目标源
+          type: typeSelect.value // 几何类型，拿到option的选择类型
+        })
+        map.addInteraction(draw)
+        snap = new Snap({ source: source }) // 捕捉交互，source：从此来源捕捉功能
+        map.addInteraction(snap)
+      }
+
+      /**
+       * Handle change event.
+       */
+      typeSelect.onchange = function() { // onchange也可用于单选框与复选框改变后触发的事件
+        map.removeInteraction(draw) // 从地图中删除给定的互动
+        map.removeInteraction(snap)
+        addInteractions()
+      }
+      addInteractions()
+    },
+    measure() {
+      var mousePositionControl = new MousePosition({
+        coordinateFormat: createStringXY(4),
+        projection: 'EPSG:4326',
+        // comment the following two lines to have the mouse position
+        // be placed within the map.
+        className: 'custom-mouse-position',
+        target: document.getElementById('mouse-position'),
+        undefinedHTML: '&nbsp;'
+      })
+      var raster = new TileLayer({
+        source: new OSM()
+      })
+
+      var source = new VectorSource()
+
       var vector = new VectorLayer({
         source: source,
         style: new Style({
@@ -97,8 +149,86 @@ export default {
           })
         })
       })
+      var projectionSelect = document.getElementById('projection')
+      projectionSelect.addEventListener('change', function(event) {
+        mousePositionControl.setProjection(event.target.value)
+      })
+
+      var precisionInput = document.getElementById('precision')
+      precisionInput.addEventListener('change', function(event) {
+        var format = createStringXY(event.target.valueAsNumber)
+        mousePositionControl.setCoordinateFormat(format)
+      })
+      /**
+       * Currently drawn feature.
+       * @type {import("../src/ol/Feature.js").default}
+       */
+      var sketch
+
+      /**
+       * The help tooltip element.
+       * @type {HTMLElement}
+       */
+      var helpTooltipElement
+
+      /**
+       * Overlay to show the help messages.
+       * @type {Overlay}
+       */
+      var helpTooltip
+
+      /**
+       * The measure tooltip element.
+       * @type {HTMLElement}
+       */
+      var measureTooltipElement
+
+      /**
+       * Overlay to show the measurement.
+       * @type {Overlay}
+       */
+      var measureTooltip
+
+      /**
+       * Message to show when the user is drawing a polygon.
+       * @type {string}
+       */
+      var continuePolygonMsg = 'Click to continue drawing the polygon'
+
+      /**
+       * Message to show when the user is drawing a line.
+       * @type {string}
+       */
+      var continueLineMsg = 'Click to continue drawing the line'
+
+      /**
+       * Handle pointer move.
+       * @param {import("../src/ol/MapBrowserEvent").default} evt The event.
+       */
+      var pointerMoveHandler = function(evt) {
+        if (evt.dragging) { // dragging:指示当前是否正在拖动地图。仅为POINTERDRAG和POINTERMOVE事件设置 。默认值为false。
+          return
+        }
+        /** @type {string} */
+        var helpMsg = 'Click to start drawing'
+
+        if (sketch) {
+          var geom = sketch.getGeometry()
+          if (geom instanceof Polygon) {
+            helpMsg = continuePolygonMsg
+          } else if (geom instanceof LineString) {
+            helpMsg = continueLineMsg
+          }
+        }
+
+        helpTooltipElement.innerHTML = helpMsg
+        helpTooltip.setPosition(evt.coordinate)
+
+        helpTooltipElement.classList.remove('hidden')
+      }
 
       var map = new Map({
+        controls: defaultControls().extend([mousePositionControl]),
         layers: [raster, vector],
         target: 'map',
         view: new View({
@@ -106,33 +236,161 @@ export default {
           zoom: 4
         })
       })
+      map.on('pointermove', pointerMoveHandler)
 
-      var modify = new Modify({ source: source })
-      map.addInteraction(modify)
+      map.getViewport().addEventListener('mouseout', function() {
+        helpTooltipElement.classList.add('hidden')
+      })
 
-      var draw, snap // global so we can remove them later
-      var typeSelect = document.getElementById('type')
+      var typeSelect = document.getElementById('measure')
 
-      function addInteractions() {
-        draw = new Draw({
-          source: source,
-          type: typeSelect.value
-        })
-        map.addInteraction(draw)
-        snap = new Snap({ source: source })
-        map.addInteraction(snap)
+      var draw // global so we can remove it later
+
+      /**
+       * Format length output.
+       * @param {LineString} line The line.
+       * @return {string} The formatted length.
+       */
+      var formatLength = function(line) {
+        var length = getLength(line)
+        var output
+        if (length > 100) {
+          output = (Math.round(length / 1000 * 100) / 100) +
+                  ' ' + 'km'
+        } else {
+          output = (Math.round(length * 100) / 100) +
+                  ' ' + 'm'
+        }
+        return output
       }
 
       /**
-       * Handle change event.
+       * Format area output.
+       * @param {Polygon} polygon The polygon.
+       * @return {string} Formatted area.
+       */
+      var formatArea = function(polygon) {
+        var area = getArea(polygon)
+        var output
+        if (area > 10000) {
+          output = (Math.round(area / 1000000 * 100) / 100) +
+                  ' ' + 'km<sup>2</sup>'
+        } else {
+          output = (Math.round(area * 100) / 100) +
+                  ' ' + 'm<sup>2</sup>'
+        }
+        return output
+      }
+
+      function addInteraction() {
+        var type = (typeSelect.value === 'area' ? 'Polygon' : 'LineString')
+        draw = new Draw({
+          source: source,
+          type: type,
+          style: new Style({
+            fill: new Fill({
+              color: 'rgba(255, 255, 255, 0.2)'
+            }),
+            stroke: new Stroke({
+              color: 'rgba(0, 0, 0, 0.5)',
+              lineDash: [10, 10],
+              width: 2
+            }),
+            image: new CircleStyle({
+              radius: 5,
+              stroke: new Stroke({
+                color: 'rgba(0, 0, 0, 0.7)'
+              }),
+              fill: new Fill({
+                color: 'rgba(255, 255, 255, 0.2)'
+              })
+            })
+          })
+        })
+        map.addInteraction(draw)
+
+        createMeasureTooltip()
+        createHelpTooltip()
+
+        var listener
+        draw.on('drawstart', // 聆听某种类型的事件。
+          function(evt) {
+            // set sketch
+            sketch = evt.feature
+
+            /** @type {import("../src/ol/coordinate.js").Coordinate|undefined} */
+            var tooltipCoord = evt.coordinate
+            // getGeometry:获取特征的默认几何
+            listener = sketch.getGeometry().on('change', function(evt) {
+              var geom = evt.target
+              var output
+              if (geom instanceof Polygon) {
+                output = formatArea(geom)
+                tooltipCoord = geom.getInteriorPoint().getCoordinates()
+              } else if (geom instanceof LineString) {
+                output = formatLength(geom)
+                tooltipCoord = geom.getLastCoordinate()
+              }
+              measureTooltipElement.innerHTML = output
+              measureTooltip.setPosition(tooltipCoord) // 设置此叠加层的位置
+            })
+          })
+
+        draw.on('drawend',
+          function() {
+            measureTooltipElement.className = 'ol-tooltip ol-tooltip-static'
+            measureTooltip.setOffset([0, -7])
+            // unset sketch
+            sketch = null
+            // unset tooltip so that a new one can be created
+            measureTooltipElement = null
+            createMeasureTooltip()
+            unByKey(listener) // 使用on()或返回的键删除事件侦听器once()。
+          })
+      }
+
+      /**
+       * Creates a new help tooltip
+       */
+      function createHelpTooltip() {
+        if (helpTooltipElement) {
+          helpTooltipElement.parentNode.removeChild(helpTooltipElement)
+        }
+        helpTooltipElement = document.createElement('div')
+        helpTooltipElement.className = 'ol-tooltip hidden'
+        helpTooltip = new Overlay({
+          element: helpTooltipElement,
+          offset: [15, 0],
+          positioning: 'center-left'
+        })
+        map.addOverlay(helpTooltip)
+      }
+
+      /**
+       * Creates a new measure tooltip
+       */
+      function createMeasureTooltip() {
+        if (measureTooltipElement) {
+          measureTooltipElement.parentNode.removeChild(measureTooltipElement)
+        }
+        measureTooltipElement = document.createElement('div')
+        measureTooltipElement.className = 'ol-tooltip ol-tooltip-measure'
+        measureTooltip = new Overlay({
+          element: measureTooltipElement,
+          offset: [0, -15],
+          positioning: 'bottom-center'
+        })
+        map.addOverlay(measureTooltip)
+      }
+
+      /**
+       * Let user change the geometry type.
        */
       typeSelect.onchange = function() {
         map.removeInteraction(draw)
-        map.removeInteraction(snap)
-        addInteractions()
+        addInteraction()
       }
-
-      addInteractions()
+      addInteraction()
     }
   }
 }
