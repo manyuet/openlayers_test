@@ -2,8 +2,8 @@
   <div id="app">
     <!--    <ol-map />-->
     <!--    <w-m-t-s-test />-->
-        <test />
-<!--      <switch-tian-di-tu />-->
+    <test />
+    <!--      <switch-tian-di-tu />-->
   </div>
 
 </template>

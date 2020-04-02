@@ -35,7 +35,7 @@ export default {
         ],
         view: new View({
           center: fromLonLat([116.24, 39.55]),
-          zoom: 4
+          zoom: 10
         })
       })
     },
@@ -75,7 +75,6 @@ export default {
       this.map.addLayer(map_ter)
       this.map.addLayer(map_cta)
     }
-
   }
 }
 </script>
