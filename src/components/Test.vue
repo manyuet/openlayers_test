@@ -20,9 +20,10 @@
           <i class="el-icon-crop" />
         </el-button>
       </el-col>
-      <el-button circle size="mini" @click="changedToImg">Img</el-button>
-      <el-button circle size="mini" @click="changedToVec">Vec</el-button>
-      <el-button circle size="mini" @click="changedToTer">Ter</el-button>
+      <el-button circle size="mini" @click="changedToImg">影像图层</el-button>
+      <el-button circle size="mini" @click="changedToTer">地形图层</el-button>
+      <el-button @click="changedToVec">路网开</el-button>
+      <el-button @click="removeVec">路网关</el-button>
     </el-row>
     <div id="mouse-position">
       <span>Projection </span>
@@ -42,12 +43,10 @@ import { unByKey } from 'ol/Observable'
 import Overlay from 'ol/Overlay'
 import { getLength, getArea } from 'ol/sphere'
 import { LineString, Polygon } from 'ol/geom'
-// import { defaults as defaultControls } from 'ol/control'
 import MousePosition from 'ol/control/MousePosition'
 import { createStringXY } from 'ol/coordinate'
 import XYZ from 'ol/source/XYZ'
 import { fromLonLat } from 'ol/proj'
-// import Control from 'ol/control/Control'
 export default {
   name: 'Test',
   data() {
@@ -58,11 +57,13 @@ export default {
       map: null,
       img: new TileLayer({
         source: new XYZ({
+          title: '影像图层',
           url: 'http://t3.tianditu.com/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=240859a554196e2374a6bb80cfdd3de6'
         })
       }),
       map_cva: new TileLayer({
         source: new XYZ({
+          title: '天地图文字标注',
           url: 'http://t3.tianditu.com/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=240859a554196e2374a6bb80cfdd3de6'
         })
       }),
@@ -117,18 +118,25 @@ export default {
     },
     changedToImg() {
       // layersArray.insertAt(1, this.img)
+      this.removeVec()
       this.map.removeLayer(this.map.getLayers().item(0))
       this.map.addLayer(this.img)
     },
     changedToVec() {
-      this.map.removeLayer(this.map.getLayers().item(0))
-      this.map.addLayer(this.map_vec)
+      // this.map.removeLayer(this.map.getLayers().item(0))
+      // this.map.addLayer(this.map_vec)
+
       this.map.addLayer(this.map_cva)
+
+      // this.map.removeLayer(this.map_cva)
+    },
+    removeVec() {
+      this.map.removeLayer(this.map_cva)
     },
     changedToTer() {
+      this.removeVec()
       this.map.removeLayer(this.map.getLayers().item(0))
       this.map.addLayer(this.map_ter)
-      this.map.addLayer(this.map_ter_cva)
     },
     draw(map) {
       this.measureValue = ''
@@ -139,6 +147,12 @@ export default {
       map.addLayer(drawLayer)
       var typeSelect = document.getElementById('type')
       var draw
+      var pointerMoveHandler = function(evt) { // 鼠标移动触发的函数
+        if (evt.dragging) { // dragging:指示当前是否正在拖动地图。默认值为false,拖动为true
+          // if这段代码好像注释掉也没什么影响，好像是为了拖动地图是不触发事件？？
+          return
+        }
+      }
       function addInteraction() {
         draw = new Draw({
           source: drawLayer.getSource(),
@@ -146,6 +160,9 @@ export default {
         })
         map.addInteraction(draw)
       }
+      map.un('pointermove', pointerMoveHandler) // 只有一次测量
+      map.removeInteraction(draw)
+      map.removeInteraction(draw)
       typeSelect.onchange = function() {
         map.removeInteraction(draw)
         addInteraction()
@@ -281,6 +298,7 @@ export default {
                 tooltipCoord = geom.getLastCoordinate()
               }
               measureTooltipElement.innerHTML = output
+              // console.log(measureTooltip)
               measureTooltip.setPosition(tooltipCoord) // 设置此叠加层的位置
             })
           })
@@ -295,6 +313,9 @@ export default {
             measureTooltipElement = null
             createMeasureTooltip()
             unByKey(listener) // 使用on()或返回的键删除事件侦听器once()。
+            map.un('pointermove', pointerMoveHandler) // 只有一次测量
+            map.removeInteraction(draw)
+            helpTooltipElement.classList.add('hidden')
           })
       }
 
