@@ -38,7 +38,7 @@ import View from 'ol/View'
 import { Draw } from 'ol/interaction'
 import { Tile as TileLayer, Vector as VectorLayer } from 'ol/layer'
 import { OSM, Vector as VectorSource } from 'ol/source'
-import { Circle as CircleStyle, Fill, Stroke, Style } from 'ol/style'
+// import { Circle as CircleStyle, Fill, Stroke, Style } from 'ol/style'
 import { unByKey } from 'ol/Observable'
 import Overlay from 'ol/Overlay'
 import { getLength, getArea } from 'ol/sphere'
@@ -82,7 +82,6 @@ export default {
           url: 'http://t4.tianditu.com/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=240859a554196e2374a6bb80cfdd3de6'
         })
       })
-
     }
   },
   mounted() {
@@ -104,6 +103,7 @@ export default {
           zoom: 4
         })
       })
+      console.log(this.map.getLayers().array_)
       this.mousePosition()
     },
     mousePosition() { // 实时监测鼠标坐标
@@ -117,18 +117,15 @@ export default {
       this.map.addControl(this.mousePositionControl)
     },
     changedToImg() {
-      // layersArray.insertAt(1, this.img)
       this.removeVec()
       this.map.removeLayer(this.map.getLayers().item(0))
-      this.map.addLayer(this.img)
+      var layersArray = this.map.getLayers()
+      layersArray.insertAt(0, this.img)
+      console.log(this.map.getLayers().array_)
     },
     changedToVec() {
-      // this.map.removeLayer(this.map.getLayers().item(0))
-      // this.map.addLayer(this.map_vec)
-
-      this.map.addLayer(this.map_cva)
-
-      // this.map.removeLayer(this.map_cva)
+      var layersArray = this.map.getLayers()
+      layersArray.insertAt(1, this.map_cva)
     },
     removeVec() {
       this.map.removeLayer(this.map_cva)
@@ -136,7 +133,8 @@ export default {
     changedToTer() {
       this.removeVec()
       this.map.removeLayer(this.map.getLayers().item(0))
-      this.map.addLayer(this.map_ter)
+      var layersArray = this.map.getLayers()
+      layersArray.insertAt(0, this.map_ter)
     },
     draw(map) {
       this.measureValue = ''
@@ -144,15 +142,15 @@ export default {
       var drawLayer = new VectorLayer({
         source: new VectorSource()
       })
-      map.addLayer(drawLayer)
       var typeSelect = document.getElementById('type')
       var draw
-      var pointerMoveHandler = function(evt) { // 鼠标移动触发的函数
-        if (evt.dragging) { // dragging:指示当前是否正在拖动地图。默认值为false,拖动为true
-          // if这段代码好像注释掉也没什么影响，好像是为了拖动地图是不触发事件？？
-          return
-        }
-      }
+      map.addLayer(drawLayer)
+      // var pointerMoveHandler = function(evt) { // 鼠标移动触发的函数
+      //   if (evt.dragging) { // dragging:指示当前是否正在拖动地图。默认值为false,拖动为true
+      //     // if这段代码好像注释掉也没什么影响，好像是为了拖动地图是不触发事件？？
+      //     return
+      //   }
+      // }
       function addInteraction() {
         draw = new Draw({
           source: drawLayer.getSource(),
@@ -160,8 +158,7 @@ export default {
         })
         map.addInteraction(draw)
       }
-      map.un('pointermove', pointerMoveHandler) // 只有一次测量
-      map.removeInteraction(draw)
+      // map.un('pointermove', pointerMoveHandler) // 只有一次测量
       map.removeInteraction(draw)
       typeSelect.onchange = function() {
         map.removeInteraction(draw)
@@ -171,57 +168,19 @@ export default {
     },
     measure(map) { // 测量长度，面积
       this.drawValue = ''
-      var source = new VectorSource()
-      // setPosition(tooltipCoord)
-      var vector = new VectorLayer({
-        source: source,
-        style: new Style({
-          fill: new Fill({
-            color: 'rgba(255, 255, 255, 0.2)'
-          }),
-          stroke: new Stroke({
-            color: '#ffcc33',
-            width: 2
-          }),
-          image: new CircleStyle({
-            radius: 7,
-            fill: new Fill({
-              color: '#ffcc33'
-            })
-          })
-        })
-      })
-
-      var sketch
-
-      var helpTooltipElement // 帮助提示框对象
-
-      var helpTooltip // 帮助提示信息对象
-
-      var measureTooltipElement // 测量提示框对象
-
-      var measureTooltip // 测量提示信息对象
-
-      var pointerMoveHandler = function(evt) { // 鼠标移动触发的函数
-        if (evt.dragging) { // dragging:指示当前是否正在拖动地图。默认值为false,拖动为true
-          // if这段代码好像注释掉也没什么影响，好像是为了拖动地图是不触发事件？？
-          return
-        }
-        helpTooltip.setPosition(evt.coordinate) // setPosition(位置)：设置此叠加层的位置
-        helpTooltipElement.classList.remove('hidden') // 移除已经存在的类名;当鼠标移除地图视图的时为帮助提示要素添加隐藏样式
-      }
       map = this.map
-      map.addLayer(vector)
-      map.on('pointermove', pointerMoveHandler) // 监听type的pointerMoveHandler
-      // addEventListener=onclick
-      map.getViewport().addEventListener('mouseout', function() { // getViewport():拿到作为地图viewport的元素
-        helpTooltipElement.classList.add('hidden') // 添加新的类
+      // 加载测量的绘制矢量层
+      // var source = new VectorSource()
+      var vector = new VectorLayer({
+        source: new VectorSource()
       })
-
-      var typeSelect = document.getElementById('measure')
-
+      var sketch
+      var helpTooltipElement // 帮助提示框对象
+      var helpTooltip // 帮助提示信息对象
+      var measureTooltipElement // 测量提示框对象
+      var measureTooltip // 测量提示信息对象
+      var listener
       var draw
-
       var formatLength = function(line) {
         var length = getLength(line)
         var output
@@ -234,7 +193,6 @@ export default {
         }
         return output // output测量结果
       }
-
       var formatArea = function(polygon) {
         var area = getArea(polygon)
         var output
@@ -247,48 +205,56 @@ export default {
         }
         return output
       }
-
+      var pointerMoveHandler = function(evt) { // 鼠标移动触发的函数
+        if (evt.dragging) { // dragging:指示当前是否正在拖动地图。默认值为false,拖动为true
+          // if这段代码好像注释掉也没什么影响，好像是为了拖动地图是不触发事件？？
+          return
+        }
+        helpTooltip.setPosition(evt.coordinate) // setPosition(位置)：设置此叠加层的位置
+        helpTooltipElement.classList.remove('hidden') // 移除已经存在的类名;当鼠标移除地图视图的时为帮助提示要素添加隐藏样式
+      }
+      var typeSelect = document.getElementById('measure')
+      var drawType = (typeSelect.value === 'area' ? 'Polygon' : 'LineString')
       function addInteraction() {
-        var type = (typeSelect.value === 'area' ? 'Polygon' : 'LineString')
         draw = new Draw({ // 绘图要素几何的交互
-          source: source,
-          type: type,
-          style: new Style({
-            fill: new Fill({
-              color: 'rgba(255, 255, 255, 0.2)'
-            }),
-            stroke: new Stroke({
-              color: 'rgba(0, 0, 0, 0.5)',
-              lineDash: [10, 10],
-              width: 2
-            }),
-            image: new CircleStyle({
-              radius: 5,
-              stroke: new Stroke({
-                color: 'rgba(0, 0, 0, 0.7)'
-              }),
-              fill: new Fill({
-                color: 'rgba(255, 255, 255, 0.2)'
-              })
-            })
-          })
+          source: vector.getSource(),
+          type: drawType
+          // style: new Style({
+          //   fill: new Fill({
+          //     color: 'rgba(255, 255, 255, 0.2)'
+          //   }),
+          //   stroke: new Stroke({
+          //     color: 'rgba(0, 0, 0, 0.5)',
+          //     lineDash: [10, 10],
+          //     width: 2
+          //   }),
+          //   image: new CircleStyle({
+          //     radius: 5,
+          //     stroke: new Stroke({
+          //       color: 'rgba(0, 0, 0, 0.7)'
+          //     }),
+          //     fill: new Fill({
+          //       color: 'rgba(255, 255, 255, 0.2)'
+          //     })
+          //   })
+          // })
         })
         map.addInteraction(draw)
-
+        map.addLayer(vector)
         createMeasureTooltip()
         createHelpTooltip()
-
-        var listener
+        // 在绘图开始时实时计算当前当前绘制线的长度或多边形的面积，以提示框形式显示
         draw.on('drawstart', // 聆听type的事件。
           function(evt) {
             // set sketch
-            sketch = evt.feature
+            sketch = evt.feature // 绘制的要素
 
             /** @type {import("../src/ol/coordinate.js").Coordinate|undefined} */
-            var tooltipCoord = evt.coordinate
+            var tooltipCoord = evt.coordinate // 绘制的坐标
             // getGeometry:获取特征的默认几何
+            // 绑定change事件，根据绘制几何类型得到测量长度值或面积值，并将其设置到测量工具提示框中显示
             listener = sketch.getGeometry().on('change', function(evt) {
-              var geom = evt.target
+              var geom = evt.target // 绘制几何要素
               var output
               if (geom instanceof Polygon) {
                 output = formatArea(geom)
@@ -297,31 +263,32 @@ export default {
                 output = formatLength(geom)
                 tooltipCoord = geom.getLastCoordinate()
               }
-              measureTooltipElement.innerHTML = output
-              // console.log(measureTooltip)
-              measureTooltip.setPosition(tooltipCoord) // 设置此叠加层的位置
+              measureTooltipElement.innerHTML = output // 将测量值设置到测量工具提示框中显示
+              measureTooltip.setPosition(tooltipCoord) // 设置测量工具提示框的显示位置,setPosition():设置此叠加层的位置
             })
           })
 
+        // 绘图结束时重新创建一个测量提示框显示测量结果
         draw.on('drawend',
           function() {
-            measureTooltipElement.className = 'ol-tooltip ol-tooltip-static'
+            measureTooltipElement.className = 'ol-tooltip ol-tooltip-static' // 设置测量提示框的样式
             measureTooltip.setOffset([0, -7])
             // unset sketch
-            sketch = null
+            sketch = null // 置空当前绘制的要素对象
             // unset tooltip so that a new one can be created
-            measureTooltipElement = null
-            createMeasureTooltip()
+            measureTooltipElement = null // 置空测量工具提示框对象
+            createMeasureTooltip() // 重新创建一个测试工具提示框显示结果
             unByKey(listener) // 使用on()或返回的键删除事件侦听器once()。
             map.un('pointermove', pointerMoveHandler) // 只有一次测量
             map.removeInteraction(draw)
             helpTooltipElement.classList.add('hidden')
           })
       }
-
-      /**
-       * Creates a new help tooltip
-       */
+      map.on('pointermove', pointerMoveHandler) // 监听type的pointerMoveHandler
+      // addEventListener=onclick
+      map.getViewport().addEventListener('mouseout', function() { // getViewport():拿到作为地图viewport的元素
+        helpTooltipElement.classList.add('hidden') // 添加新的类
+      })
       function createHelpTooltip() {
         if (helpTooltipElement) {
           helpTooltipElement.parentNode.removeChild(helpTooltipElement)
@@ -335,10 +302,6 @@ export default {
         })
         map.addOverlay(helpTooltip)
       }
-
-      /**
-       * Creates a new measure tooltip
-       */
       function createMeasureTooltip() {
         if (measureTooltipElement) {
           measureTooltipElement.parentNode.removeChild(measureTooltipElement)
@@ -352,10 +315,6 @@ export default {
         })
         map.addOverlay(measureTooltip)
       }
-
-      /**
-       * Let user change the geometry type.
-       */
       typeSelect.onchange = function() {
         map.removeInteraction(draw)
         addInteraction()
