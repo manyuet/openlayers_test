@@ -1,6 +1,5 @@
 <template>
   <div id="app">
-    <!--    <ol-map />-->
     <!--    <w-m-t-s-test />-->
     <test />
     <!--      <switch-tian-di-tu />-->
@@ -9,7 +8,7 @@
 </template>
 
 <script>
-// import OlMap from './components/OlMap'
+
 // import WMTSTest from './components/WMTS_test'
 import Test from './components/Test'
 // import SwitchTianDiTu from './components/SwitchTian_Di_tu'
@@ -19,7 +18,6 @@ export default {
     // SwitchTianDiTu
     Test
     // WMTSTest
-    // OlMap
   }
 }
 </script>

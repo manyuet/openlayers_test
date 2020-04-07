@@ -24,10 +24,12 @@
       <el-button circle size="mini" @click="changedToTer">地形图层</el-button>
       <el-button @click="changedToVec">路网开</el-button>
       <el-button @click="removeVec">路网关</el-button>
+      <el-button @click="swipe">swipe</el-button>
     </el-row>
     <div id="mouse-position">
       <span>Projection </span>
     </div>
+    <input v-show="swipeOn" id="swipe" type="range" style="width: 100%">
   </div>
 </template>
 
@@ -47,12 +49,14 @@ import MousePosition from 'ol/control/MousePosition'
 import { createStringXY } from 'ol/coordinate'
 import XYZ from 'ol/source/XYZ'
 import { fromLonLat } from 'ol/proj'
+import { getRenderPixel } from 'ol/render'
 export default {
   name: 'Test',
   data() {
     return {
       drawValue: '',
       measureValue: '',
+      swipeOn: false,
       mousePositionControl: null,
       map: null,
       img: new TileLayer({
@@ -90,6 +94,56 @@ export default {
     // this.draw()
   },
   methods: {
+    swipe(map) {
+      // var osm = new TileLayer({
+      //   source: new OSM()
+      // })
+
+      // var key = 'Get your own API key at https://www.maptiler.com/cloud/'
+      this.swipeOn = true
+      var attributions = '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> ' +
+              '<a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
+
+      var aerial = new TileLayer({
+        source: new XYZ({
+          attributions: attributions,
+          url: 'http://t3.tianditu.com/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=d0cf74b31931aab68af181d23fa23d8d',
+          maxZoom: 20
+        })
+      })
+      map = this.map
+      map.addLayer(aerial)
+
+      var swipe = document.getElementById('swipe')
+
+      aerial.on('prerender', function(event) {
+        var ctx = event.context
+        var mapSize = map.getSize()
+        var width = mapSize[0] * (swipe.value / 100)
+        var tl = getRenderPixel(event, [width, 0])
+        var tr = getRenderPixel(event, [mapSize[0], 0])
+        var bl = getRenderPixel(event, [width, mapSize[1]])
+        var br = getRenderPixel(event, mapSize)
+
+        ctx.save()
+        ctx.beginPath()
+        ctx.moveTo(tl[0], tl[1])
+        ctx.lineTo(bl[0], bl[1])
+        ctx.lineTo(br[0], br[1])
+        ctx.lineTo(tr[0], tr[1])
+        ctx.closePath()
+        ctx.clip() // 裁剪aerial地图，以形成卷帘效果
+      })
+
+      aerial.on('postrender', function(event) { // 在aerial地图渲染之后触发
+        var ctx = event.context
+        ctx.restore() // 恢复canvas设置
+      })
+
+      swipe.addEventListener('input', function() { // 在每次用户改变swipe控件时触发
+        map.render() // 渲染地图
+      }, false)
+    },
     init() {
       this.map = new Map({
         target: 'map',
@@ -145,12 +199,6 @@ export default {
       var typeSelect = document.getElementById('type')
       var draw
       map.addLayer(drawLayer)
-      // var pointerMoveHandler = function(evt) { // 鼠标移动触发的函数
-      //   if (evt.dragging) { // dragging:指示当前是否正在拖动地图。默认值为false,拖动为true
-      //     // if这段代码好像注释掉也没什么影响，好像是为了拖动地图是不触发事件？？
-      //     return
-      //   }
-      // }
       function addInteraction() {
         draw = new Draw({
           source: drawLayer.getSource(),
@@ -158,7 +206,6 @@ export default {
         })
         map.addInteraction(draw)
       }
-      // map.un('pointermove', pointerMoveHandler) // 只有一次测量
       map.removeInteraction(draw)
       typeSelect.onchange = function() {
         map.removeInteraction(draw)
@@ -169,8 +216,6 @@ export default {
     measure(map) { // 测量长度，面积
       this.drawValue = ''
       map = this.map
-      // 加载测量的绘制矢量层
-      // var source = new VectorSource()
       var vector = new VectorLayer({
         source: new VectorSource()
       })
