@@ -3,6 +3,7 @@
     <!--    <w-m-t-s-test />-->
     <test />
     <!--      <switch-tian-di-tu />-->
+    <!--    <draw />-->
   </div>
 
 </template>
@@ -11,10 +12,13 @@
 
 // import WMTSTest from './components/WMTS_test'
 import Test from './components/Test'
+// import Draw from './components/draw'
 // import SwitchTianDiTu from './components/SwitchTian_Di_tu'
+
 export default {
   name: 'App',
   components: {
+    // Draw
     // SwitchTianDiTu
     Test
     // WMTSTest

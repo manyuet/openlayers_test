@@ -1,35 +1,30 @@
 <template>
   <div id="map" class="map">
-    <el-row>
-      <el-col :span="5">
-        <el-select id="type" v-model="drawValue" placeholder="请选择" size="mini" style="width: 100px">
-          <el-option value="Point" />
-          <el-option value="LineString" />
-          <el-option value="Polygon" />
-        </el-select>
-        <el-button type="primary" circle size="mini" @click="draw">
-          <i class="el-icon-edit" />
-        </el-button>
-      </el-col>
-      <el-col :span="5">
-        <el-select id="measure" v-model="measureValue" placeholder="请选择" size="mini" style="width: 100px">
-          <el-option value="length" />
-          <el-option value="area" />
-        </el-select>
-        <el-button type="primary" circle size="mini" @click="measure">
-          <i class="el-icon-crop" />
-        </el-button>
-      </el-col>
-      <el-button circle size="mini" @click="changedToImg">影像图层</el-button>
-      <el-button circle size="mini" @click="changedToTer">地形图层</el-button>
-      <el-button @click="changedToVec">路网开</el-button>
-      <el-button @click="removeVec">路网关</el-button>
-      <el-button @click="swipe">swipe</el-button>
-    </el-row>
-    <div id="mouse-position">
-      <span>Projection </span>
+    <div class="drawMap">
+      <select id="type">
+        <option value="Point">point</option>
+        <option value="LineString">line</option>
+        <option value="Polygon">polygon</option>
+      </select>
+      <button @click="draw">draw</button>
     </div>
-    <input v-show="swipeOn" id="swipe" type="range" style="width: 100%">
+
+    <el-select id="measure" v-model="measureValue" placeholder="请选择" size="mini" style="width: 100px">
+      <el-option value="length" />
+      <el-option value="area" />
+    </el-select>
+    <el-button type="primary" circle size="mini" @click="measure">
+      <i class="el-icon-crop" />
+    </el-button>
+
+    <el-button circle size="mini" @click="changedToImg">影像图层</el-button>
+    <el-button circle size="mini" @click="changedToTer">地形图层</el-button>
+    <span>路网</span>
+    <el-switch v-model="luWangSwitch" @change="changedToVec">路网</el-switch>
+    <span>多屏对比</span>
+    <el-switch v-model="swipeSwitch" @change="swipe">swipe</el-switch>
+    <input v-show="swipeSwitch" id="swipe" type="range" style="width: 100%">
+    <div id="mouse-position" />
   </div>
 </template>
 
@@ -40,7 +35,6 @@ import View from 'ol/View'
 import { Draw } from 'ol/interaction'
 import { Tile as TileLayer, Vector as VectorLayer } from 'ol/layer'
 import { OSM, Vector as VectorSource } from 'ol/source'
-// import { Circle as CircleStyle, Fill, Stroke, Style } from 'ol/style'
 import { unByKey } from 'ol/Observable'
 import Overlay from 'ol/Overlay'
 import { getLength, getArea } from 'ol/sphere'
@@ -54,9 +48,9 @@ export default {
   name: 'Test',
   data() {
     return {
-      drawValue: '',
       measureValue: '',
-      swipeOn: false,
+      swipeSwitch: false,
+      luWangSwitch: false,
       mousePositionControl: null,
       map: null,
       img: new TileLayer({
@@ -85,65 +79,17 @@ export default {
         source: new XYZ({
           url: 'http://t4.tianditu.com/DataServer?T=cva_w&x={x}&y={y}&l={z}&tk=240859a554196e2374a6bb80cfdd3de6'
         })
-      })
+      }),
+      drawLayer: new VectorLayer({
+        source: new VectorSource()
+      }),
+      toolLayer: {}
     }
   },
   mounted() {
     this.init()
-    // this.measure()
-    // this.draw()
   },
   methods: {
-    swipe(map) {
-      // var osm = new TileLayer({
-      //   source: new OSM()
-      // })
-
-      // var key = 'Get your own API key at https://www.maptiler.com/cloud/'
-      this.swipeOn = true
-      var attributions = '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> ' +
-              '<a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>'
-
-      var aerial = new TileLayer({
-        source: new XYZ({
-          attributions: attributions,
-          url: 'http://t3.tianditu.com/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=d0cf74b31931aab68af181d23fa23d8d',
-          maxZoom: 20
-        })
-      })
-      map = this.map
-      map.addLayer(aerial)
-
-      var swipe = document.getElementById('swipe')
-
-      aerial.on('prerender', function(event) {
-        var ctx = event.context
-        var mapSize = map.getSize()
-        var width = mapSize[0] * (swipe.value / 100)
-        var tl = getRenderPixel(event, [width, 0])
-        var tr = getRenderPixel(event, [mapSize[0], 0])
-        var bl = getRenderPixel(event, [width, mapSize[1]])
-        var br = getRenderPixel(event, mapSize)
-
-        ctx.save()
-        ctx.beginPath()
-        ctx.moveTo(tl[0], tl[1])
-        ctx.lineTo(bl[0], bl[1])
-        ctx.lineTo(br[0], br[1])
-        ctx.lineTo(tr[0], tr[1])
-        ctx.closePath()
-        ctx.clip() // 裁剪aerial地图，以形成卷帘效果
-      })
-
-      aerial.on('postrender', function(event) { // 在aerial地图渲染之后触发
-        var ctx = event.context
-        ctx.restore() // 恢复canvas设置
-      })
-
-      swipe.addEventListener('input', function() { // 在每次用户改变swipe控件时触发
-        map.render() // 渲染地图
-      }, false)
-    },
     init() {
       this.map = new Map({
         target: 'map',
@@ -157,9 +103,9 @@ export default {
           zoom: 4
         })
       })
-      console.log(this.map.getLayers().array_)
+      this.map.addLayer(this.drawLayer)
       this.mousePosition()
-    },
+    }, // 初始化地图
     mousePosition() { // 实时监测鼠标坐标
       this.mousePositionControl = new MousePosition({ // 显示鼠标光标的2D坐标的控件
         coordinateFormat: createStringXY(4), // 坐标格式
@@ -169,56 +115,94 @@ export default {
         undefinedHTML: '&nbsp;' // 标记以显示坐标何时不可用（例如，当指针离开地图视口时）
       })
       this.map.addControl(this.mousePositionControl)
-    },
+    }, // 鼠标位置
+    swipe(map) {
+      var aerial = new TileLayer({
+        source: new XYZ({
+          // attributions: attributions,
+          url: 'http://t3.tianditu.com/DataServer?T=img_w&x={x}&y={y}&l={z}&tk=d0cf74b31931aab68af181d23fa23d8d',
+          maxZoom: 20
+        })
+      })
+      map = this.map
+      console.log(this.map.getLayers())
+      if (this.swipeSwitch) {
+        map.getLayers().insertAt(1, aerial)
+        var swipe = document.getElementById('swipe') // 用于控制卷帘位置的DOM元素
+
+        aerial.on('prerender', (event) => { // 在渲染之前触发
+          var ctx = event.context // 获得canvas渲染上下文
+          var mapSize = map.getSize() // 地图的width,height
+          var width = mapSize[0] * (swipe.value / 100) // 用于保存卷帘的位置(卷帘宽度)
+          var tl = getRenderPixel(event, [width, 0]) // 返回值是event的canvas的像素
+          var tr = getRenderPixel(event, [mapSize[0], 0])
+          var bl = getRenderPixel(event, [width, mapSize[1]])
+          var br = getRenderPixel(event, mapSize)
+          ctx.save() // 保存canvas设置
+          ctx.beginPath() // 开始绘制路径
+          ctx.moveTo(tl[0], tl[1])
+          ctx.lineTo(bl[0], bl[1])
+          ctx.lineTo(br[0], br[1])
+          ctx.lineTo(tr[0], tr[1])
+          ctx.closePath()
+          ctx.clip() // 裁剪aerial地图，以形成卷帘效果
+        })
+
+        aerial.on('postrender', (event) => { // 在aerial地图渲染之后触发
+          var ctx = event.context
+          ctx.restore() // 恢复canvas设置
+        })
+
+        swipe.addEventListener('input', () => { // 在每次用户改变swipe控件时触发
+          map.render() // 渲染地图
+        }, false)
+      } else {
+        map.removeLayer(this.map.getLayers().item(1))
+      }
+    }, // 卷帘效果
     changedToImg() {
-      this.removeVec()
       this.map.removeLayer(this.map.getLayers().item(0))
       var layersArray = this.map.getLayers()
       layersArray.insertAt(0, this.img)
       console.log(this.map.getLayers().array_)
-    },
+    }, // 切换成影像图层
     changedToVec() {
       var layersArray = this.map.getLayers()
-      layersArray.insertAt(1, this.map_cva)
-    },
-    removeVec() {
-      this.map.removeLayer(this.map_cva)
-    },
+      if (this.luWangSwitch) {
+        layersArray.insertAt(1, this.map_cva)
+      } else {
+        this.map.removeLayer(this.map_cva)
+      }
+    }, // 路网开关
     changedToTer() {
-      this.removeVec()
       this.map.removeLayer(this.map.getLayers().item(0))
       var layersArray = this.map.getLayers()
       layersArray.insertAt(0, this.map_ter)
-    },
-    draw(map) {
-      this.measureValue = ''
+    }, // 切换成地形图层
+    draw(map, drawLayer) {
       map = this.map
-      var drawLayer = new VectorLayer({
-        source: new VectorSource()
-      })
+      drawLayer = this.drawLayer
       var typeSelect = document.getElementById('type')
-      var draw
-      map.addLayer(drawLayer)
+
+      var draw // global so we can remove it later
       function addInteraction() {
         draw = new Draw({
-          source: drawLayer.getSource(),
+          source: map.getLayers().array_[1].getSource(),
           type: typeSelect.value
         })
+        map.getLayers().array_[1].getSource().clear()
         map.addInteraction(draw)
       }
-      map.removeInteraction(draw)
       typeSelect.onchange = function() {
+        // map.getLayers().array_[1].getSource().clear()
         map.removeInteraction(draw)
         addInteraction()
       }
       addInteraction()
     },
-    measure(map) { // 测量长度，面积
-      this.drawValue = ''
+    measure(map, vector) { // 测量长度，面积
       map = this.map
-      var vector = new VectorLayer({
-        source: new VectorSource()
-      })
+      vector = this.drawLayer
       var sketch
       var helpTooltipElement // 帮助提示框对象
       var helpTooltip // 帮助提示信息对象
@@ -264,28 +248,9 @@ export default {
         draw = new Draw({ // 绘图要素几何的交互
           source: vector.getSource(),
           type: drawType
-          // style: new Style({
-          //   fill: new Fill({
-          //     color: 'rgba(255, 255, 255, 0.2)'
-          //   }),
-          //   stroke: new Stroke({
-          //     color: 'rgba(0, 0, 0, 0.5)',
-          //     lineDash: [10, 10],
-          //     width: 2
-          //   }),
-          //   image: new CircleStyle({
-          //     radius: 5,
-          //     stroke: new Stroke({
-          //       color: 'rgba(0, 0, 0, 0.7)'
-          //     }),
-          //     fill: new Fill({
-          //       color: 'rgba(255, 255, 255, 0.2)'
-          //     })
-          //   })
-          // })
         })
+        map.getLayers().array_[1].getSource().clear()
         map.addInteraction(draw)
-        map.addLayer(vector)
         createMeasureTooltip()
         createHelpTooltip()
         // 在绘图开始时实时计算当前当前绘制线的长度或多边形的面积，以提示框形式显示
@@ -309,6 +274,7 @@ export default {
                 tooltipCoord = geom.getLastCoordinate()
               }
               measureTooltipElement.innerHTML = output // 将测量值设置到测量工具提示框中显示
+
               measureTooltip.setPosition(tooltipCoord) // 设置测量工具提示框的显示位置,setPosition():设置此叠加层的位置
             })
           })
@@ -365,14 +331,30 @@ export default {
         addInteraction()
       }
       addInteraction()
-    }
+    } // 测量长度面积
   }
 }
 </script>
 
 <style scoped>
-#map{
-  height:400px;
-  width: 100%;
-}
+  #map {
+    width: 100%;
+    height: 600px;
+    position: absolute;
+  }
+  #mouse-position {
+    position: absolute;
+    bottom: 5px;
+    height: 20px;
+    right: 20px;
+    /* 将z-index设置为显示在地图上层 */
+    z-index: 2000;
+    color: aliceblue;
+  }
+  .drawMap {
+    position: absolute;
+    background-color: aliceblue;
+    right: 20px;
+    height: 30px;
+  }
 </style>
